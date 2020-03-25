@@ -1,0 +1,38 @@
+init |xSize/ySize/zSize| [size: int(1-32)]
+init |structName| [structure_name: string(no spaces)]
+
+new |block| [block_type: String(repeating/chain/impulse)] [facing: String(up/down/north/south/east/west)] [conditional: bool] [xCoord: int(0-32)] [yCoord: int(0-32)] [zCoord: int(0-32)] [command_string: String]
+
+# this is a full line comment
+
+new |line| [startX: int(0-32)] [startY: int(0-32)] [startZ: int(0-32)] [facing: String(up/down/north/south/east/west)] {
+	[block_type: String(repeating/chain/impulse)] [conditional: bool] [command_string: String]
+	.
+	. max 32 blocks in a line
+	.
+}
+
+make continuous function that fits in a space (snakes around)
+----------------------------------------------------------------------------------Example file------------------------------------------------------------------
+# fills remaining space with air
+init xSize 2
+init ySize 1
+init zSize 1
+init structName HelloWorld
+
+# says hello world
+new block impulse up false 1 0 0 say hello world
+---------------------------------------------------------------------------------Example file 2-----------------------------------------------------------------
+init xSize 1
+init ySize 5
+init zSize 1
+init structName lineTest
+
+# says numbers 1 to 5
+new line 0 0 0 up {
+	repeating false say 1
+	chain false say 2
+	chain false say 3
+	chain false say 4
+	chain false say 5
+}

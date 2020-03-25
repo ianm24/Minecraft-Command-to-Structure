@@ -1,0 +1,8 @@
+# fills remaining space with air
+init xSize 2
+init ySize 1
+init zSize 1
+init structName HelloWorld
+
+# says hello world
+new block impulse up false 1 0 0 say hello world

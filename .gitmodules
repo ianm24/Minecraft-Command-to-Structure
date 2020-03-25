@@ -1,0 +1,3 @@
+[submodule "lib/NBT"]
+	path = lib/NBT
+	url = https://github.com/twoolie/NBT
