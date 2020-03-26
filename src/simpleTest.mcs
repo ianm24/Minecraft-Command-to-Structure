@@ -5,4 +5,5 @@ init zSize 1
 init structName HelloWorld
 
 # says hello world
-new block impulse up false 1 0 0 say hello world
+new block impulse up false 0 0 0 say hello world
+new block chain up false 1 0 0 say hello world but funnier

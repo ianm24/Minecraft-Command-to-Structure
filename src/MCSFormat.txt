@@ -1,11 +1,11 @@
 init |xSize/ySize/zSize| [size: int(1-32)]
-init |structName| [structure_name: string(no spaces)]
+init |structName| [structure_name: string(letter, numbers, underscores, and hyphens only)]
 
-new |block| [block_type: String(repeating/chain/impulse)] [facing: String(up/down/north/south/east/west)] [conditional: bool] [xCoord: int(0-32)] [yCoord: int(0-32)] [zCoord: int(0-32)] [command_string: String]
+new |block| [block_type: String(repeating/chain/impulse)] [facing: String(up/down/north/south/east/west)] [conditional: bool] [xCoord: int(0-31)] [yCoord: int(0-31)] [zCoord: int(0-31)] [command_string: String]
 
 # this is a full line comment
 
-new |line| [startX: int(0-32)] [startY: int(0-32)] [startZ: int(0-32)] [facing: String(up/down/north/south/east/west)] {
+new |line| [startX: int(0-31)] [startY: int(0-31)] [startZ: int(0-31)] [facing: String(up/down/north/south/east/west)] {
 	[block_type: String(repeating/chain/impulse)] [conditional: bool] [command_string: String]
 	.
 	. max 32 blocks in a line
