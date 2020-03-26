@@ -1,9 +1,25 @@
-# fills remaining space with air
-init xSize 2
-init ySize 1
+init xSize 4
+init ySize 5
 init zSize 1
-init structName HelloWorld
+init structName lineTest
 
-# says hello world
-new block impulse up false 0 0 0 say hello world
+# says numbers 1 to 5
+new line 0 0 0 up {
+	repeating false say 1
+	chain false say 2
+	chain false say 3
+	chain false say 4
+	chain false say 5
+}
+
 new block chain up false 1 0 0 say hello world but funnier
+
+new line 2 0 0 up {
+	repeating false say 1
+	chain false say 2
+	chain false say 3
+	chain false say 4
+	chain false say 5
+}
+
+new block chain up false 3 0 0 say hello world but funnier

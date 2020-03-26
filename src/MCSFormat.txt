@@ -13,17 +13,8 @@ new |line| [startX: int(0-31)] [startY: int(0-31)] [startZ: int(0-31)] [facing: 
 }
 
 make continuous function that fits in a space (snakes around)
-----------------------------------------------------------------------------------Example file------------------------------------------------------------------
-# fills remaining space with air
-init xSize 2
-init ySize 1
-init zSize 1
-init structName HelloWorld
-
-# says hello world
-new block impulse up false 1 0 0 say hello world
----------------------------------------------------------------------------------Example file 2-----------------------------------------------------------------
-init xSize 1
+-----------------------------------------------------------------------Example File-------------------------------------------------------------------------
+init xSize 4
 init ySize 5
 init zSize 1
 init structName lineTest
@@ -36,3 +27,36 @@ new line 0 0 0 up {
 	chain false say 4
 	chain false say 5
 }
+
+new block chain up false 1 0 0 say hello world but funnier
+
+new line 2 0 0 up {
+	repeating false say 1
+	chain false say 2
+	chain false say 3
+	chain false say 4
+	chain false say 5
+}
+
+new block chain up false 3 0 0 say hello world but funnier
+-----------------------------------------------------------------------Output-------------------------------------------------------------------------------
+[
+	[
+		[4, 5, 1],
+		'lineTest'
+	],
+	[
+		['repeating', 'up', 'false', [0, 0, 0], 'say 1 '],
+		['chain', 'up', 'false', [0, 1, 0], 'say 2 '],
+		['chain', 'up', 'false', [0, 2, 0], 'say 3 '],
+		['chain', 'up', 'false', [0, 3, 0], 'say 4 '],
+		['chain', 'up', 'false', [0, 4, 0], 'say 5 '],
+		['chain', 'up', 'false', [1, 0, 0], 'say hello world but funnier '],
+		['repeating', 'up', 'false', [2, 0, 0], 'say 1 '],
+		['chain', 'up', 'false', [2, 1, 0], 'say 2 '],
+		['chain', 'up', 'false', [2, 2, 0], 'say 3 '],
+		['chain', 'up', 'false', [2, 3, 0], 'say 4 '],
+		['chain', 'up', 'false', [2, 4, 0], 'say 5 '],
+		['chain', 'up', 'false', [3, 0, 0], 'say hello world but funnier ']
+	]
+]  
