@@ -1,6 +1,3 @@
-init xSize 4
-init ySize 5
-init zSize 1
 init structName lineTest
 
 # says numbers 1 to 5
@@ -12,7 +9,7 @@ new line 0 0 0 up {
 	chain false say 5
 }
 
-new block chain up false 1 0 0 say hello world but funnier
+new block impulse north false 1 0 0 say hello world 1
 
 new line 2 0 0 up {
 	repeating false say 1
@@ -22,4 +19,4 @@ new line 2 0 0 up {
 	chain false say 5
 }
 
-new block chain up false 3 0 0 say hello world but funnier
+new block chain north false 3 0 0 say hello world 2

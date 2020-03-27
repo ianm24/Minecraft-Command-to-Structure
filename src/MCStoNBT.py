@@ -6,8 +6,11 @@ import nbt
 from nbt import *
 
 # Validates structure size
-def checkStructSize(size):
-	return int(size) >= 1 and int(size) <= 32
+def checkStructSize(structSize):
+	for x in range(0,3):
+		if int(structSize[x]) > 32 or int(structSize[x]) < 1:
+			return False
+	return True
 
 # Validates structure name
 def checkstructName(structName):
@@ -29,15 +32,9 @@ def checkBlockDirection(blockDirection):
 
 # Checks if the line direction will stay inside the structure
 def checkLineDirection(lineDirection,lineStartCoordinates,structSize):
-	if lineDirection == "east" and int(lineStartCoordinates[0]) - 1 >= structSize[0]:
-		return False
-	elif lineDirection == "west" and int(lineStartCoordinates[0]) - 1 <= 0:
-		return False
-	elif lineDirection == "up" and int(lineStartCoordinates[1]) + 1 >= structSize[1]:
+	if lineDirection == "west" and int(lineStartCoordinates[0]) - 1 <= 0:
 		return False
 	elif lineDirection == "down" and int(lineStartCoordinates[1]) - 1 <= 0:
-		return False
-	elif lineDirection == "south" and int(lineStartCoordinates[2]) + 1 >= structSize[2]:
 		return False
 	elif lineDirection == "north" and int(lineStartCoordinates[2]) - 1 <= 0:
 		return False
@@ -49,11 +46,15 @@ def checkConditionalStatus(conditionalStatus):
 	return conditionalStatus.lower() == "false" or conditionalStatus.lower() == "true"
 
 # Validates coordinate values
-def checkCoordinates(coordinates,structSize):
+def checkCoordinates(coordinates):
 	for x in range(0,3):
-		if int(coordinates[x]) > (int(structSize[x]) - 1) or int(coordinates[x]) < 0:
+		if int(coordinates[x]) > 31 or int(coordinates[x]) < 0:
 			return False
 	return True
+
+# Makes sure there isn't another block in the same coordinate
+def checkCoordEmpty(coordinates, usedCoordList):
+	return not coordinates in usedCoordList
 
 # Converts from direction String format to direction list format
 def getDirectionValue(direction):
@@ -89,8 +90,23 @@ def getDirectionName(direction):
 	else:
 		return False
 
+# Returns the structure's size given which coordinates have blocks
+def getStructureSize(usedCoordList):
+	maxX = 1
+	maxY = 1
+	maxZ = 1
+	for coordinate in usedCoordList:
+		if coordinate[0] >= maxX:
+			maxX = coordinate[0] + 1
+		if coordinate[1] >= maxY:
+			maxY = coordinate[1] + 1
+		if coordinate[2] >= maxZ:
+			maxZ = coordinate[2] + 1
+	return [maxX,maxY,maxZ]
+
+
 # Given block data, validates input and returns data as list
-def makeBlock(blockType,blockDirection,conditional,blockCoordinates,command,lineNumber,structSize):
+def makeBlock(blockType,blockDirection,conditional,blockCoordinates,command,lineNumber,usedCoordList):
 	if not checkBlockType(blockType):
 		print("BlockTypeError on Line " + str(lineNumber) + ": \"" + str(blockType) +
 			"\" is not a valid block type. Block types must be either \"repeating\",\"chain\", or \"impulse\".")
@@ -106,9 +122,13 @@ def makeBlock(blockType,blockDirection,conditional,blockCoordinates,command,line
 		print("BlockConditionalStatusError on Line " + str(lineNumber) + ": \"" + str(conditional) +
 			"\" is not a valid block conditional status. Block conditional status\' must be True or False.")
 		exit()
-	if not checkCoordinates(blockCoordinates,structSize):
+	if not checkCoordinates(blockCoordinates):
 		print("BlockCoordinateOutOfRangeError on Line " + str(lineNumber) + ": \"" + str(blockCoordinates) +
-			"\" is an invalid block coordinate. Block coordinate values must be less than the structure size.")
+			"\" is an invalid block coordinate. Block coordinate values must be less than the structure size and greater than or equal to zero.")
+		exit()
+	if not checkCoordEmpty(blockCoordinates,usedCoordList):
+		print("BlockCoordinateUsedError on Line " + str(lineNumber) + ": \"" + str(blockCoordinates) +
+			"\" has already been occupied. Please make sure to only put one block at a certain coordinate.")
 		exit()
 	return [blockType,blockDirection,conditional,blockCoordinates,command]
 
@@ -117,10 +137,16 @@ def makeBlock(blockType,blockDirection,conditional,blockCoordinates,command,line
 def makeNBTFile(fileData):
 	STRUCT_INFO = fileData[0]
 	BLOCK_LIST = fileData[1]
-	print(fileData)
+	USED_COORDS_LIST = fileData[2]
+	AIR_BLOCKS = []
+
+	print("Writing " + STRUCT_INFO[1] + ".nbt")
+	print([STRUCT_INFO,BLOCK_LIST])
+	print(STRUCT_INFO[1] + ".nbt Successfully Written")
 
 # Parses the MCS file and returns all relavent file data
 def parseFile(fileName):
+	print("Parsing " + fileName)
 	mcsFile = open(fileName, 'r')
 	line = mcsFile.readline()
 	lineNumber = 1
@@ -130,6 +156,7 @@ def parseFile(fileName):
 	CURR_LINE_DIRECTION = [-1,-1]
 	STRUCT_INFO = [[-1,-1,-1],""]
 	BLOCK_LIST = []
+	USED_COORDS_LIST = []
 	LINE_START_COORDINATES = []
 	while line:
 		# empty line or a comment
@@ -147,7 +174,7 @@ def parseFile(fileName):
 				line = mcsFile.readline()
 				lineNumber += 1
 				continue
-			if nextLineBlock[CURR_LINE_DIRECTION[0]] >= STRUCT_INFO[0][CURR_LINE_DIRECTION[0]] or nextLineBlock[CURR_LINE_DIRECTION[0]] < 0:
+			if nextLineBlock[CURR_LINE_DIRECTION[0]] >= 32 or nextLineBlock[CURR_LINE_DIRECTION[0]] < 0:
 				print("LineOutOfBoundsError on Line " + str(lineNumber) + ": \"" + str(nextLineBlock) +
 						"\" is outside of the structure. Make sure your line fits inside of the structure.")
 				exit()
@@ -156,7 +183,8 @@ def parseFile(fileName):
 			command = ""
 			for x in range(2,len(lineText)):
 				command += lineText[x] + " "
-			lineBlockData = makeBlock(blockType,CURR_LINE_DIRECTION,conditional,nextLineBlock[:],command,lineNumber,STRUCT_INFO[0])
+			lineBlockData = makeBlock(blockType,CURR_LINE_DIRECTION,conditional,nextLineBlock[:],command,lineNumber,USED_COORDS_LIST)
+			USED_COORDS_LIST.append(nextLineBlock[:])
 			BLOCK_LIST.append(lineBlockData[:])
 			CURR_LINE_LENGTH += 1
 			nextLineBlock[CURR_LINE_DIRECTION[0]] += CURR_LINE_DIRECTION[1]
@@ -164,25 +192,7 @@ def parseFile(fileName):
 
 		# Initialization variables
 		elif lineText[0] == "init":
-			if lineText[1] == "xSize":
-				STRUCT_INFO[0][0] = int(lineText[2])
-				if not checkStructSize(STRUCT_INFO[0][0]):
-					print("StructureSizeError on Line " + str(lineNumber) + ": \"" + str(STRUCT_INFO[0][0]) +
-						"\" is an invalid structure size value. Structure size values must be integers in the range [1-32].")
-					exit()
-			elif lineText[1] == "ySize":
-				STRUCT_INFO[0][1] = int(lineText[2])
-				if not checkStructSize(STRUCT_INFO[0][1]):
-					print("StructureSizeError on Line " + str(lineNumber) + ": \"" + str(STRUCT_INFO[0][1]) +
-						"\" is an invalid structure size value. Structure size values must be integers in the range [1-32].")
-					exit()
-			elif lineText[1] == "zSize":
-				STRUCT_INFO[0][2] = int(lineText[2])
-				if not checkStructSize(STRUCT_INFO[0][2]):
-					print("StructureSizeError on Line " + str(lineNumber) + ": \"" + str(STRUCT_INFO[0][2]) +
-						"\" is an invalid structure size value. Structure size values must be integers in the range [1-32].")
-					exit()
-			elif lineText[1] == "structName":
+			if lineText[1] == "structName":
 				STRUCT_INFO[1] = str(lineText[2])
 				if not checkstructName(STRUCT_INFO[1]):
 					print("StructureNameError on Line " + str(lineNumber) + ": \"" + str(STRUCT_INFO[1]) +
@@ -190,15 +200,15 @@ def parseFile(fileName):
 					exit()
 			else:
 				print("InitializationError on Line " + str(lineNumber) + ": \"" + str(lineText[1]) +
-					"\" is not an initialization command. Acceptable commands are: \"xSize\",\"ySize\",\"zSize\", and \"structName\".")
+					"\" is not an initialization command. Acceptable commands are: \"structName\".")
 				exit()
 
 
 		# New Objects
 		elif lineText[0] == "new":
-			if STRUCT_INFO[1] == "" or STRUCT_INFO[0] == [-1,-1,-1]:
+			if STRUCT_INFO[1] == "":
 				print("InitializationError on Line " + str(lineNumber) + ": \"" + str(lineText[0]) +
-					"\" called before structure initialization. Structure name and size must be initialized before creating objects.")
+					"\" called before structure initialization. Structure name must be initialized before creating objects.")
 				exit()
 			# New Blocks
 			if lineText[1] == "block":
@@ -209,12 +219,13 @@ def parseFile(fileName):
 				command = ""
 				for x in range(8,len(lineText)):
 					command += lineText[x] + " "
-				blockData = makeBlock(blockType,blockDirection,conditional,blockCoordinates,command,lineNumber,STRUCT_INFO[0])
+				blockData = makeBlock(blockType,blockDirection,conditional,blockCoordinates,command,lineNumber,USED_COORDS_LIST)
+				USED_COORDS_LIST.append(blockCoordinates)
 				BLOCK_LIST.append(blockData[:])
 			# New Lines
 			elif lineText[1] == "line":				
 				lineStartCoordinates = [int(lineText[2]),int(lineText[3]),int(lineText[4])]
-				if not checkCoordinates(lineStartCoordinates,STRUCT_INFO[0]):
+				if not checkCoordinates(lineStartCoordinates):
 					print("LineCoordinateOutOfRangeError on Line " + str(lineNumber) + ": \"" + str(lineStartCoordinates) +
 						"\" is an invalid line start coordinate. Line start coordinate values must be inside the structure.")
 					exit()
@@ -244,9 +255,10 @@ def parseFile(fileName):
 		line = mcsFile.readline()
 		lineNumber += 1
 
+	STRUCT_INFO[0] = getStructureSize(USED_COORDS_LIST)
 	mcsFile.close()
-	print("File Successfully Parsed")
-	fileData = [STRUCT_INFO,BLOCK_LIST]
+	print(fileName + " Successfully Parsed")
+	fileData = [STRUCT_INFO,BLOCK_LIST,USED_COORDS_LIST]
 	return fileData
 
 
