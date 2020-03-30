@@ -1,0 +1,18 @@
+init |structName| [structure_name: string(letter, numbers, underscores, and hyphens only)]
+
+new |block| [block_type: String(repeating/chain/impulse)] [facing: String(up/down/north/south/east/west)] [conditional: bool] [xCoord: int(0-31)] [yCoord: int(0-31)] [zCoord: int(0-31)] [command_string: String]
+
+# this is a full line comment
+
+new |line| [startX: int(0-31)] [startY: int(0-31)] [startZ: int(0-31)] [facing: String(up/down/north/south/east/west)] {
+	[block_type: String(repeating/chain/impulse)] [conditional: bool] [command_string: String]
+	.
+	. max 32 blocks in a line
+	.
+}
+
+new |snake| [startX: int(0-31)] [startY: int(0-31)] [startZ: int(0-31)] [lineLimit: int(2-32)] [startfacing: String(up/down/north/south/east/west)] [staticDimension: char(x,y,z)] [otherDimensionDirection: String(pos/neg)]{
+	.
+	. max blocks based on start block, end block, and line limit
+	.
+}

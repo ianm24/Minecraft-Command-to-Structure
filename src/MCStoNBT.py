@@ -149,6 +149,16 @@ def getOtherDimension(currCoord,direction,staticDimension):
 		if not tempCoord[x] - currCoord[x] == direction[1]:
 			return x
 
+# Converts the file's block type to the NBT compatible type
+def getFinalizedBlockType(blockType):
+	if blockType == "repeating":
+		return "repeating_command_block"
+	elif blockType == "chain":
+		return "chain_command_block"
+	elif blockType == "impulse":
+		return "command_block"
+	else:
+		return False
 
 # Given block data, validates input and returns data as list
 def makeBlock(blockType,blockDirection,conditional,blockCoordinates,command,lineNumber,usedCoordList):
@@ -156,6 +166,7 @@ def makeBlock(blockType,blockDirection,conditional,blockCoordinates,command,line
 		print("BlockTypeError on Line " + str(lineNumber) + ": \"" + str(blockType) +
 			"\" is not a valid block type. Block types must be either \"repeating\",\"chain\", or \"impulse\".")
 		exit()
+	modifiedBlockType = getFinalizedBlockType(blockType)
 	allowedDirectionsList = [[0,1],[0,-1],[1,1],[1,-1],[2,1],[2,-1]]
 	if blockDirection in allowedDirectionsList:
 		blockDirection = getDirectionName(blockDirection)
@@ -175,7 +186,7 @@ def makeBlock(blockType,blockDirection,conditional,blockCoordinates,command,line
 		print("BlockCoordinateUsedError on Line " + str(lineNumber) + ": \"" + str(blockCoordinates) +
 			"\" has already been occupied. Please make sure to only put one block at a certain coordinate.")
 		exit()
-	return [blockType,blockDirection,conditional,blockCoordinates,command]
+	return [modifiedBlockType,blockDirection,conditional,blockCoordinates,command]
 
 # Returns the next snake block's coordinates and direction
 def getNextSnakeBlock(startCoords,currCoord,lineLimit,direction,staticDimensionChar,otherDimDirection):
@@ -216,6 +227,13 @@ def getNextSnakeBlock(startCoords,currCoord,lineLimit,direction,staticDimensionC
 		else:
 			return[currCoord,startDirection]
 
+# Gets the current state's position in the state list
+def getState(currState, stateList):
+	for x in range(0,len(stateList)):
+		if currState == stateList[x]:
+			return x
+	return len(stateList)
+
 
 # Uses file data from parseFile() to create the structure's NBT file
 def makeNBTFile(fileData):
@@ -225,7 +243,78 @@ def makeNBTFile(fileData):
 	AIR_BLOCKS = []
 
 	print("Writing " + STRUCT_INFO[1] + ".nbt")
-	print([STRUCT_INFO,BLOCK_LIST])
+	
+	nbtfile = NBTFile()
+	sizeList = TAG_List(name="size", type=TAG_Int)
+	sizeList.tags.append(TAG_Int(STRUCT_INFO[0][0]))
+	sizeList.tags.append(TAG_Int(STRUCT_INFO[0][1]))
+	sizeList.tags.append(TAG_Int(STRUCT_INFO[0][2]))
+
+	entitiesList = TAG_List(name="entities", type=TAG_Compound)
+	blocksList = TAG_List(name="blocks", type=TAG_Compound)
+	paletteList = TAG_List(name="palette", type=TAG_Compound)
+
+	stateList = []
+
+	for x in range(0,len(BLOCK_LIST)):
+		currState = [BLOCK_LIST[x][0],BLOCK_LIST[x][2],BLOCK_LIST[x][1]]
+		autoVal = 0
+		if currState[0] == "chain_command_block":
+			autoVal = 1
+
+		blocksList.tags.append(TAG_Compound())
+		blocksList[x].tags.append(TAG_Compound(name="nbt"))
+		blocksList[x]["nbt"].tags.append(TAG_Byte(name="conditionMet", value=0))
+		blocksList[x]["nbt"].tags.append(TAG_Byte(name="auto", value=autoVal))
+		blocksList[x]["nbt"].tags.append(TAG_String(name="CustomName", value="{\"text\":\"@\"}"))
+		blocksList[x]["nbt"].tags.append(TAG_Byte(name="powered", value=0))
+		blocksList[x]["nbt"].tags.append(TAG_String(name="Command", value=BLOCK_LIST[x][4]))
+		blocksList[x]["nbt"].tags.append(TAG_String(name="id", value="minecraft:command_block"))
+		blocksList[x]["nbt"].tags.append(TAG_Int(name="SuccessCount", value=0))
+		blocksList[x]["nbt"].tags.append(TAG_Byte(name="TrackOutput", value=1))
+		blocksList[x]["nbt"].tags.append(TAG_Byte(name="UpdateLastExecution", value=1))
+		blocksList[x].tags.append(TAG_List(name="pos", type=TAG_Int))
+		blocksList[x]["pos"].tags.append(TAG_Int(BLOCK_LIST[x][3][0]))
+		blocksList[x]["pos"].tags.append(TAG_Int(BLOCK_LIST[x][3][1]))
+		blocksList[x]["pos"].tags.append(TAG_Int(BLOCK_LIST[x][3][2]))
+		blocksList[x].tags.append(TAG_Int(name="state", value=getState(currState,stateList)))
+
+		if not currState in stateList:
+			paletteList.tags.append(TAG_Compound())
+			paletteList[len(stateList)].tags.append(TAG_Compound(name="Properties"))
+			paletteList[len(stateList)]["Properties"].tags.append(TAG_String(name="conditional", value=BLOCK_LIST[x][2]))
+			paletteList[len(stateList)]["Properties"].tags.append(TAG_String(name="facing", value=BLOCK_LIST[x][1]))
+			paletteList[len(stateList)].tags.append(TAG_String(name="Name", value="minecraft:"+BLOCK_LIST[x][0]))
+			stateList.append(currState[:])
+
+	amountOfAirBlocks = 0
+	for x in range(0,STRUCT_INFO[0][0]):
+		for y in range(0,STRUCT_INFO[0][1]):
+			for z in range(0,STRUCT_INFO[0][2]):
+				if not [x,y,z] in USED_COORDS_LIST:
+					blocksList.tags.append(TAG_Compound())
+					blocksList[len(BLOCK_LIST)+amountOfAirBlocks].tags.append(TAG_List(name="pos", type=TAG_Int))
+					blocksList[len(BLOCK_LIST)+amountOfAirBlocks]["pos"].tags.append(TAG_Int(x))
+					blocksList[len(BLOCK_LIST)+amountOfAirBlocks]["pos"].tags.append(TAG_Int(y))
+					blocksList[len(BLOCK_LIST)+amountOfAirBlocks]["pos"].tags.append(TAG_Int(z))
+					blocksList[len(BLOCK_LIST)+amountOfAirBlocks].tags.append(TAG_Int(name="state", value=len(stateList)))
+					amountOfAirBlocks += 1
+
+	paletteList.tags.append(TAG_Compound())
+	paletteList[len(stateList)].tags.append(TAG_String(name="Name", value="minecraft:air"))
+
+
+	dataVer = TAG_Int(name="DataVersion", value=2230)
+
+	nbtfile.tags.append(sizeList)
+	nbtfile.tags.append(entitiesList)
+	nbtfile.tags.append(blocksList)
+	nbtfile.tags.append(paletteList)
+	nbtfile.tags.append(dataVer)
+	
+	# print(nbtfile.pretty_tree())
+	nbtfile.write_file(STRUCT_INFO[1] + ".nbt")
+
 	print(STRUCT_INFO[1] + ".nbt Successfully Written")
 
 # Parses the MCS file and returns all relavent file data
