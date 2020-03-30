@@ -11,7 +11,7 @@ new |line| [startX: int(0-31)] [startY: int(0-31)] [startZ: int(0-31)] [facing: 
 	.
 }
 
-new |snake| [startX: int(0-31)] [startY: int(0-31)] [startZ: int(0-31)] [endX: int(0-31)] [endY: int(0-31)] [endZ: int(0-31)] [lineLimit: int(2-32)] [startfacing: String(up/down/north/south/east/west)] {
+new |snake| [startX: int(0-31)] [startY: int(0-31)] [startZ: int(0-31)] [lineLimit: int(2-32)] [startfacing: String(up/down/north/south/east/west)] [staticDimension: char(x,y,z)] [otherDimensionDirection: String(pos/neg)]{
 	.
 	. max blocks based on start block, end block, and line limit
 	.
@@ -20,44 +20,67 @@ make continuous function that fits in a space (snakes around)
 -----------------------------------------------------------------------Example File-------------------------------------------------------------------------
 init structName lineTest
 
-# says numbers 1 to 5
+# tests the comment
 new line 0 0 0 up {
-	repeating false say 1
-	chain false say 2
-	chain false say 3
-	chain false say 4
-	chain false say 5
+	repeating false say line1 1
+	chain false say line1 2
+	chain false say line1 3
+	chain false say line1 4
+	chain false say line1 5
 }
 
-new block impulse north false 1 0 0 say hello world 1
+new block impulse north false 1 0 0 say block 1
 
 new line 2 0 0 up {
 	repeating false say 1
+	chain false say line2 2
+	chain false say line2 3
+	chain false say line2 4
+	chain false say line2 5
+}
+
+new block chain north false 3 0 0 say block 2
+
+new snake 4 3 0 3 east z neg {
+	repeating false say 1
 	chain false say 2
 	chain false say 3
 	chain false say 4
 	chain false say 5
+	chain false say 6
+	chain false say 7
+	chain false say 8
+	chain false say 9
+	chain false say 10
 }
-
-new block chain north false 3 0 0 say hello world 2
 -----------------------------------------------------------------------Output-------------------------------------------------------------------------------
 [
 	[
-		[4, 5, 1],
+		[7, 5, 1],
 		'lineTest'
 	],
 	[
-		['repeating', 'up', 'false', [0, 0, 0], 'say 1 '],
-		['chain', 'up', 'false', [0, 1, 0], 'say 2 '],
-		['chain', 'up', 'false', [0, 2, 0], 'say 3 '],
-		['chain', 'up', 'false', [0, 3, 0], 'say 4 '],
-		['chain', 'up', 'false', [0, 4, 0], 'say 5 '],
-		['chain', 'up', 'false', [1, 0, 0], 'say hello world but funnier '],
+		['repeating', 'up', 'false', [0, 0, 0], 'say line1 1 '],
+		['chain', 'up', 'false', [0, 1, 0], 'say line1 2 '],
+		['chain', 'up', 'false', [0, 2, 0], 'say line1 3 '],
+		['chain', 'up', 'false', [0, 3, 0], 'say line1 4 '],
+		['chain', 'up', 'false', [0, 4, 0], 'say line1 5 '],
+		['impulse', 'north', 'false', [1, 0, 0], 'say block 1 '],
 		['repeating', 'up', 'false', [2, 0, 0], 'say 1 '],
-		['chain', 'up', 'false', [2, 1, 0], 'say 2 '],
-		['chain', 'up', 'false', [2, 2, 0], 'say 3 '],
-		['chain', 'up', 'false', [2, 3, 0], 'say 4 '],
-		['chain', 'up', 'false', [2, 4, 0], 'say 5 '],
-		['chain', 'up', 'false', [3, 0, 0], 'say hello world but funnier ']
+		['chain', 'up', 'false', [2, 1, 0], 'say line2 2 '],
+		['chain', 'up', 'false', [2, 2, 0], 'say line2 3 '],
+		['chain', 'up', 'false', [2, 3, 0], 'say line2 4 '],
+		['chain', 'up', 'false', [2, 4, 0], 'say line2 5 '],
+		['chain', 'north', 'false', [3, 0, 0], 'say block 2 '],
+		['repeating', 'east', 'false', [4, 3, 0], 'say 1 '],
+		['chain', 'east', 'false', [5, 3, 0], 'say 2 '],
+		['chain', 'down', 'false', [6, 3, 0], 'say 3 '],
+		['chain', 'west', 'false', [6, 2, 0], 'say 4 '],
+		['chain', 'west', 'false', [5, 2, 0], 'say 5 '],
+		['chain', 'down', 'false', [4, 2, 0], 'say 6 '],
+		['chain', 'east', 'false', [4, 1, 0], 'say 7 '],
+		['chain', 'east', 'false', [5, 1, 0], 'say 8 '],
+		['chain', 'down', 'false', [6, 1, 0], 'say 9 '],
+		['chain', 'west', 'false', [6, 0, 0], 'say 10 ']
 	]
 ]  

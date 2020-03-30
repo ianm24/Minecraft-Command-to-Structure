@@ -1,6 +1,7 @@
 # Copyright 2020 Ian McDowell
 nbtPath = '../lib/NBT'
 import sys
+import copy
 sys.path.append(nbtPath+'/nbt')
 import nbt
 from nbt import *
@@ -31,7 +32,7 @@ def checkBlockDirection(blockDirection):
 	return blockDirection.lower() in allowedDirectionsString
 
 # Checks if the line direction will stay inside the structure
-def checkLineDirection(lineDirection,lineStartCoordinates,structSize):
+def checkLineDirection(lineDirection,lineStartCoordinates):
 	if lineDirection == "west" and int(lineStartCoordinates[0]) - 1 <= 0:
 		return False
 	elif lineDirection == "down" and int(lineStartCoordinates[1]) - 1 <= 0:
@@ -55,6 +56,22 @@ def checkCoordinates(coordinates):
 # Makes sure there isn't another block in the same coordinate
 def checkCoordEmpty(coordinates, usedCoordList):
 	return not coordinates in usedCoordList
+
+# Makes sure the snake wont go outside of the structure
+def checkSnakeLineLimit(startCoords,startDirection,lineLimit):
+	return startCoords[getDirectionValue(startDirection)[0]] + lineLimit-1 < 32
+
+# Makes sure the snake static dimension is valid
+def checkSnakeStaticDimension(staticDimensionChar):
+	return staticDimensionChar in ['x','y','z']
+
+# Makes sure the snake sign is valid
+def checkSnakeSign(sign):
+	return sign in ["pos","neg"]
+
+# Makes sure the snake direction doesnt conflict with the static dimension
+def checkSnakeStaticWithDirection(snakeStaticDimension,snakeDirection):
+	return not getDimensionValue(snakeStaticDimension) == getDirectionValue(snakeDirection)[0]
 
 # Converts from direction String format to direction list format
 def getDirectionValue(direction):
@@ -104,6 +121,34 @@ def getStructureSize(usedCoordList):
 			maxZ = coordinate[2] + 1
 	return [maxX,maxY,maxZ]
 
+# Returns the list position of a dimension
+def getDimensionValue(dimension):
+	if dimension == 'x':
+		return 0
+	elif dimension == 'y':
+		return 1
+	elif dimension == 'z':
+		return 2
+
+# Returns integer with inputted sign
+def getSignValue(sign):
+	if sign == "pos":
+		return 1
+	elif sign == "neg":
+		return -1
+	else:
+		return False
+
+# Returns other dimension being used in snake
+def getOtherDimension(currCoord,direction,staticDimension):
+	tempCoord = currCoord[:]
+	tempCoord[direction[0]] += direction[1]
+	for x in range(0,3):
+		if x == staticDimension:
+			continue
+		if not tempCoord[x] - currCoord[x] == direction[1]:
+			return x
+
 
 # Given block data, validates input and returns data as list
 def makeBlock(blockType,blockDirection,conditional,blockCoordinates,command,lineNumber,usedCoordList):
@@ -132,6 +177,45 @@ def makeBlock(blockType,blockDirection,conditional,blockCoordinates,command,line
 		exit()
 	return [blockType,blockDirection,conditional,blockCoordinates,command]
 
+# Returns the next snake block's coordinates and direction
+def getNextSnakeBlock(startCoords,currCoord,lineLimit,direction,staticDimensionChar,otherDimDirection):
+	startDirection = getDirectionName(direction)
+	staticDimension = getDimensionValue(staticDimensionChar)
+	sign = getSignValue(otherDimDirection)
+	otherDimension = getOtherDimension(currCoord,direction,staticDimension)
+	otherDirection = [otherDimension,sign]
+
+	# Figures out if the snake is going towards or away from the tail
+	directionSwap = currCoord[otherDirection[0]] - startCoords[otherDirection[0]]
+	if directionSwap % 2 == 1:
+		direction[1] *= -1
+	lineLimitTest = currCoord[direction[0]] + direction[1] - startCoords[direction[0]]
+
+	# If the snake is at the end of a line
+	if lineLimitTest > lineLimit-1:
+		direction[1] *= -1
+		currCoord[otherDirection[0]] += otherDirection[1]
+		return [currCoord,getDirectionName(direction)]
+	elif lineLimitTest < 0:
+		direction[1] *= -1
+		currCoord[otherDirection[0]] += otherDirection[1]
+		return [currCoord,getDirectionName(direction)]
+	# If the snake is about to be at the end of a line
+	elif lineLimitTest == lineLimit-1:
+		currCoord[direction[0]] += direction[1]
+		return [currCoord, getDirectionName(otherDirection)]
+	elif lineLimitTest == 0:
+		currCoord[direction[0]] += direction[1]
+		direction[1] *= -1
+		return [currCoord, getDirectionName(otherDirection)]
+	# If the snake is in the middle of a line
+	elif lineLimitTest < lineLimit-1:
+		currCoord[direction[0]] += direction[1]	
+		if directionSwap % 2 == 1:
+			return [currCoord,getDirectionName(direction)]
+		else:
+			return[currCoord,startDirection]
+
 
 # Uses file data from parseFile() to create the structure's NBT file
 def makeNBTFile(fileData):
@@ -152,12 +236,13 @@ def parseFile(fileName):
 	lineNumber = 1
 
 	LINE_MODE = False
-	CURR_LINE_LENGTH = 0
-	CURR_LINE_DIRECTION = [-1,-1]
+	SNAKE_MODE = False
+	CURR_LENGTH = 0
+	CURR_DIRECTION = [-1,-1]
 	STRUCT_INFO = [[-1,-1,-1],""]
 	BLOCK_LIST = []
 	USED_COORDS_LIST = []
-	LINE_START_COORDINATES = []
+	START_COORDINATES = []
 	while line:
 		# empty line or a comment
 		if line[0] == '\n' or line[0] == '#':
@@ -165,16 +250,18 @@ def parseFile(fileName):
 			lineNumber += 1
 			continue
 		lineText = line.split()
+
 		# Creating Lines
 		if LINE_MODE:
 			if lineText[0] ==  '}':
 				LINE_MODE = False
-				LINE_START_COORDINATES = []
-				CURR_LINE_LENGTH = 0
+				START_COORDINATES = []
+				CURR_LENGTH = 0
+				CURR_DIRECTION = [-1,-1]
 				line = mcsFile.readline()
 				lineNumber += 1
 				continue
-			if nextLineBlock[CURR_LINE_DIRECTION[0]] >= 32 or nextLineBlock[CURR_LINE_DIRECTION[0]] < 0:
+			if nextLineBlock[CURR_DIRECTION[0]] >= 32 or nextLineBlock[CURR_DIRECTION[0]] < 0:
 				print("LineOutOfBoundsError on Line " + str(lineNumber) + ": \"" + str(nextLineBlock) +
 						"\" is outside of the structure. Make sure your line fits inside of the structure.")
 				exit()
@@ -183,11 +270,38 @@ def parseFile(fileName):
 			command = ""
 			for x in range(2,len(lineText)):
 				command += lineText[x] + " "
-			lineBlockData = makeBlock(blockType,CURR_LINE_DIRECTION,conditional,nextLineBlock[:],command,lineNumber,USED_COORDS_LIST)
+			lineBlockData = makeBlock(blockType,CURR_DIRECTION,conditional,nextLineBlock[:],command,lineNumber,USED_COORDS_LIST)
 			USED_COORDS_LIST.append(nextLineBlock[:])
 			BLOCK_LIST.append(lineBlockData[:])
-			CURR_LINE_LENGTH += 1
-			nextLineBlock[CURR_LINE_DIRECTION[0]] += CURR_LINE_DIRECTION[1]
+			CURR_LENGTH += 1
+			nextLineBlock[CURR_DIRECTION[0]] += CURR_DIRECTION[1]
+
+		# Creating Snakes
+		elif SNAKE_MODE:
+			if lineText[0] ==  '}':
+				SNAKE_MODE = False
+				START_COORDINATES = []
+				CURR_DIRECTION = [-1,-1]
+				CURR_LENGTH = 0
+				line = mcsFile.readline()
+				lineNumber += 1
+				continue
+			# print(nextSnakeBlock)
+			coords = nextSnakeBlock[0][:]
+			direction = nextSnakeBlock[1][:]
+			if not checkCoordinates(coords):
+				print("SnakeOutOfBoundsError on Line " + str(lineNumber) + ": \"" + str(nextSnakeBlock) +
+						"\" is outside of the structure. Make sure your snake fits inside of the structure.")
+				exit()
+			blockType = lineText[0]
+			conditional = lineText[1]
+			command = ""
+			for x in range(2,len(lineText)):
+				command += lineText[x] + " "
+			snakeBlockData = makeBlock(blockType,direction,conditional,coords[:],command,lineNumber,USED_COORDS_LIST)
+			USED_COORDS_LIST.append(coords[:])
+			BLOCK_LIST.append(snakeBlockData[:])
+			nextSnakeBlock = getNextSnakeBlock(START_COORDINATES[:],coords[:],snakeLineLimit,CURR_DIRECTION[:],snakeStaticDimension,snakeSign)
 
 
 		# Initialization variables
@@ -222,6 +336,7 @@ def parseFile(fileName):
 				blockData = makeBlock(blockType,blockDirection,conditional,blockCoordinates,command,lineNumber,USED_COORDS_LIST)
 				USED_COORDS_LIST.append(blockCoordinates)
 				BLOCK_LIST.append(blockData[:])
+
 			# New Lines
 			elif lineText[1] == "line":				
 				lineStartCoordinates = [int(lineText[2]),int(lineText[3]),int(lineText[4])]
@@ -234,16 +349,59 @@ def parseFile(fileName):
 					print("InvalidDirectionError on Line " + str(lineNumber) + ": \"" + str(lineDirection) +
 						"\" is not a valid direction. Directions must be either \"up\",\"down\",\"north\",\"south\",\"east\", or \"west\".")
 					exit()
-				if not checkLineDirection(lineDirection,lineStartCoordinates,STRUCT_INFO[0]):
+				if not checkLineDirection(lineDirection,lineStartCoordinates):
 					print("LineDirectionError on Line " + str(lineNumber) + ": \"" + str(lineDirection) +
 						"\" points the line outside of the structure. Remember \"east\" points in the positive X direction," +
 						"\"west\" points in the negative X direction, \"up\" points in the positive Y direction,\"down\" points in the negative Y direction," +
 						" \"south\" points in the positive Z direction, and \"north\" points in the negative Z direction.") 
 					exit()
 				LINE_MODE = True
-				CURR_LINE_DIRECTION = getDirectionValue(lineDirection)
-				LINE_START_COORDINATES = lineStartCoordinates
+				CURR_DIRECTION = getDirectionValue(lineDirection)
+				START_COORDINATES = lineStartCoordinates
 				nextLineBlock = [lineStartCoordinates[0],lineStartCoordinates[1],lineStartCoordinates[2]]
+
+			#New Snakes
+			elif lineText[1] == "snake":
+				snakeStartCoordinates = [int(lineText[2]),int(lineText[3]),int(lineText[4])]
+				if not checkCoordinates(snakeStartCoordinates):
+					print("SnakeCoordinateOutOfRangeError on Line " + str(lineNumber) + ": \"" + str(snakeStartCoordinates) +
+						"\" is an invalid snake start coordinate. Snake start coordinate values must be inside the structure.")
+					exit()
+				snakeDirection = lineText[6]
+				if not checkBlockDirection(snakeDirection):
+					print("InvalidDirectionError on Line " + str(lineNumber) + ": \"" + str(snakeDirection) +
+						"\" is not a valid direction. Directions must be either \"up\",\"down\",\"north\",\"south\",\"east\", or \"west\".")
+					exit()
+				if not checkLineDirection(snakeDirection,snakeStartCoordinates):
+					print("SnakeDirectionError on Line " + str(lineNumber) + ": \"" + str(snakeDirection) +
+						"\" points the snake outside of the structure. Remember \"east\" points in the positive X direction," +
+						"\"west\" points in the negative X direction, \"up\" points in the positive Y direction,\"down\" points in the negative Y direction," +
+						" \"south\" points in the positive Z direction, and \"north\" points in the negative Z direction.") 
+					exit()
+				snakeLineLimit = int(lineText[5])
+				if not checkSnakeLineLimit(snakeStartCoordinates,snakeDirection,snakeLineLimit):
+					print("SnakeLineLimitError on Line " + str(lineNumber) + ": \"" + str(snakeLineLimit) +
+						"\" is too large. Snake line limits must keep the snake within the structure.")
+					exit()
+				snakeStaticDimension = lineText[7]
+				if not checkSnakeStaticDimension(snakeStaticDimension):
+					print("InvalidStaticDimensionError on Line " + str(lineNumber) + ": \'" + str(snakeStaticDimension) +
+						"\' is not a valid dimension. Valid dimensions are \'x\',\'y\', and \'z\'.")
+					exit()
+				if not checkSnakeStaticWithDirection(snakeStaticDimension,snakeDirection):
+					print("ConflictingStaticAndDirectionError on Line " + str(lineNumber) + ": \'" + str(snakeStaticDimension) +
+						"\' cannot be static as it is direction moved through. Remember that \"" + str(snakeDirection) + "\" moves in the "
+						+ str(['x','y','z'][getDirectionValue(snakeDirection)[0]]) + " dimension.")
+					exit()
+				snakeSign = lineText[8]
+				if not checkSnakeSign(snakeSign):
+					print("InvalidSignError on Line " + str(lineNumber) + ": \'" + str(snakeSign) +
+						"\' is not a valid sign. Valid signs are \"pos\", and \"neg\".")
+					exit()
+				SNAKE_MODE = True
+				CURR_DIRECTION = getDirectionValue(snakeDirection)
+				START_COORDINATES = snakeStartCoordinates
+				nextSnakeBlock = [snakeStartCoordinates,snakeDirection]
 			else:
 				print("NewObjectError on Line " + str(lineNumber) + ": \"" + str(lineText[1]) +
 					"\" is not an object command. Acceptable commands are: \"block\", and \"line\".")
@@ -260,7 +418,6 @@ def parseFile(fileName):
 	print(fileName + " Successfully Parsed")
 	fileData = [STRUCT_INFO,BLOCK_LIST,USED_COORDS_LIST]
 	return fileData
-
 
 def main():
 	fileName = str(input("Enter the name of the MCS file: "))
