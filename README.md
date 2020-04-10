@@ -27,4 +27,6 @@ The specification of the MCS file format is stated in the MCSFormat.txt file.
 
 Note that all chain command blocks are set to always active by default and all other types are set to needs redstone.
 
+The commits through 20 March 2020 were made with a windows git bash that had not had a user name set up, so it appears as committed by "BuilderTools" instead of "ianm24".
+
 If there are any issues with the program itself or the stated file format please feel free to add it using the GitHub issue tracker.
