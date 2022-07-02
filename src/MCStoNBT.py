@@ -1,5 +1,7 @@
 # Copyright 2020 Ian McDowell
 nbtPath = '../lib/NBT'
+inputPath = '../input/'
+outputPath = '../output/'
 import sys
 import copy
 sys.path.append(nbtPath+'/nbt')
@@ -242,7 +244,7 @@ def makeNBTFile(fileData):
 	USED_COORDS_LIST = fileData[2]
 	AIR_BLOCKS = []
 
-	print("Writing " + STRUCT_INFO[1] + ".nbt")
+	print("Writing " + outputPath + STRUCT_INFO[1] + ".nbt")
 	
 	nbtfile = NBTFile()
 	sizeList = TAG_List(name="size", type=TAG_Int)
@@ -313,9 +315,9 @@ def makeNBTFile(fileData):
 	nbtfile.tags.append(dataVer)
 	
 	# print(nbtfile.pretty_tree())
-	nbtfile.write_file(STRUCT_INFO[1] + ".nbt")
+	nbtfile.write_file(outputPath + STRUCT_INFO[1] + ".nbt")
 
-	print(STRUCT_INFO[1] + ".nbt Successfully Written")
+	print(outputPath + STRUCT_INFO[1] + ".nbt Successfully Written")
 
 # Parses the MCS file and returns all relavent file data
 def parseFile(fileName):
@@ -509,7 +511,7 @@ def parseFile(fileName):
 	return fileData
 
 def main():
-	fileName = str(input("Enter the name of the MCS file: "))
+	fileName = inputPath+str(input("Enter the name of the MCS file: "))
 	if ".mcs" not in fileName[len(fileName)-4:]:
 		print("InvalidFileNameError: \"" + str(fileName) + "\" was not an MCS file.")
 		exit()

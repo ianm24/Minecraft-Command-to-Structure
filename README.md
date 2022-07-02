@@ -15,11 +15,11 @@ Lastly run `git clone https://github.com/ianm24/NBT.git` to get the modified NBT
 
 ## Running Instructions
 
-The MCS file must be in the `src/` directory
+The MCS file must be in the `input/` directory
 
 Open a command line in the `src/` run `python MCStoNBT.py` then enter the name of your MCS file (for the test file it would be "simpleTest.mcs")
 
-The MCS file format will be converted into an NBT structure file to be put into the `world/generated/structures` folder in your Minecraft Java files then loaded via a structure block. When loading the structure in Minecraft, remember that the title will be the lowercase version of the title of the generated NBT file.
+The MCS file format will be converted into an NBT structure file in the `output/` directory. This file will be put into the `world_name/generated/minecraft/structures` folder in your Minecraft Java files then loaded via a structure block. When loading the structure in Minecraft, remember that the title will be the lowercase version of the title of the generated NBT file.
 
 ## Finishing Notes
 
